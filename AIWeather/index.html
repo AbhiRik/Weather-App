@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <!-- Tailwind removed -->
+    <link rel="stylesheet" href="style.css">
+    </style>
+</head>
+<body>
+    <!-- Responsive background video -->
+    <video class="bg-video" autoplay muted loop playsinline>
+        <source src="background.webm" type="video/webm">
+        <source src="background.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    <div class="weather-card">
+        <h1 class="weather-title">Weather Today</h1>
+        <div id="weather-content">
+            <p class="weather-loading">Loading weather data...</p>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = 'efa85b49889a79b70fd06d6d451789b4'; // Replace with your OpenWeatherMap API key
+        const weatherContent = document.getElementById('weather-content');
+
+        // Weather emoji mapping
+        const weatherEmojis = {
+            'Clear': '☀️',
+            'Clouds': '☁️',
+            'Rain': '🌧️',
+            'Drizzle': '🌦️',
+            'Thunderstorm': '⛈️',
+            'Snow': '❄️',
+            'Mist': '🌫️',
+            'Fog': '🌫️',
+            'Haze': '🌫️'
+        };
+
+        // Function to display error message
+        function displayError(message) {
+            weatherContent.innerHTML = `<p class="error-message">${message}</p>`;
+        }
+
+        // Function to fetch and display weather
+        async function getWeather(lat, lon) {
+            try {
+                const response = await fetch(
+                    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`
+                );
+                if (!response.ok) {
+                    throw new Error('Failed to fetch weather data');
+                }
+                const data = await response.json();
+                
+                // Extract weather details
+                const city = data.name || 'Unknown Location';
+                const temp = Math.round(data.main.temp);
+                const description = data.weather[0].description;
+                const weatherMain = data.weather[0].main;
+                const humidity = data.main.humidity;
+                const windSpeed = Math.round(data.wind.speed * 3.6); // Convert m/s to km/h
+
+                // Select emoji based on weather condition
+                const emoji = weatherEmojis[weatherMain] || '🌍';
+
+                // Update UI with weather data
+                weatherContent.innerHTML = `
+                    <div class="weather-emoji">${emoji}</div>
+                    <h2 class="weather-city">${city}</h2>
+                    <p class="weather-desc">${description}</p>
+                    <p class="weather-temp">${temp}°C</p>
+                    <p class="weather-info">Humidity: ${humidity}%</p>
+                    <p class="weather-info">Wind: ${windSpeed} km/h</p>
+                `;
+            } catch (error) {
+                displayError('Unable to load weather data. Please try again.');
+                console.error(error);
+            }
+        }
+
+        // Get user's location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    getWeather(latitude, longitude);
+                },
+                (error) => {
+                    displayError('Please enable location access to view weather data.');
+                    console.error(error);
+                }
+            );
+        } else {
+            displayError('Your browser does not support geolocation.');
+        }
+    </script>
+</body>
+    <!-- Chatbot Bubble -->
+    <div class="chatbot-bubble chatbot-bubble-bounce" id="chatbot-bubble" title="Chat with us!">
+        <svg viewBox="0 0 24 24"><path d="M12 3C6.48 3 2 6.92 2 11.5c0 2.09 1.01 4.01 2.77 5.5-.13.98-.56 2.09-1.61 3.13-.2.2-.26.51-.14.77.12.26.39.4.67.34 2.28-.48 3.97-1.41 5.01-2.09.42.06.85.09 1.3.09 5.52 0 10-3.92 10-8.5S17.52 3 12 3z"/></svg>
+    </div>
+    <div class="chatbot-popup" id="chatbot-popup">
+        <div class="chatbot-header">
+            <span>Weather Bot</span>
+            <button class="chatbot-close" id="chatbot-close" title="Close">&times;</button>
+        </div>
+        <div class="chatbot-messages" id="chatbot-messages">
+            <div class="chatbot-message bot"><div class="chatbot-msg-bubble">Hi! 👋 How can I help you today?</div></div>
+        </div>
+        <form class="chatbot-input-area" id="chatbot-form" autocomplete="off">
+            <input type="text" class="chatbot-input" id="chatbot-input" placeholder="Type your message..." required />
+            <button type="submit" class="chatbot-send">Send</button>
+        </form>
+    </div>
+    <script>
+        // Chatbot logic
+        const chatbotBubble = document.getElementById('chatbot-bubble');
+        const chatbotPopup = document.getElementById('chatbot-popup');
+        const chatbotClose = document.getElementById('chatbot-close');
+        const chatbotForm = document.getElementById('chatbot-form');
+        const chatbotInput = document.getElementById('chatbot-input');
+        const chatbotMessages = document.getElementById('chatbot-messages');
+
+        chatbotBubble.addEventListener('click', () => {
+            chatbotPopup.classList.add('open');
+            chatbotBubble.style.display = 'none';
+            setTimeout(() => { chatbotInput.focus(); }, 200);
+        });
+        chatbotClose.addEventListener('click', () => {
+            chatbotPopup.classList.remove('open');
+            chatbotBubble.style.display = 'flex';
+        });
+
+        // Typing indicator logic
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'chatbot-message bot chatbot-typing-indicator';
+            typingDiv.innerHTML = `
+                <div class="chatbot-msg-bubble" style="background:transparent;box-shadow:none;padding:8px 0;">
+                    <span class="chatbot-bubble-anim">
+                        <span class="bubble"></span>
+                        <span class="bubble"></span>
+                        <span class="bubble"></span>
+                    </span>
+                </div>
+            `;
+            chatbotMessages.appendChild(typingDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+            return typingDiv;
+        }
+
+        function removeTypingIndicator(typingDiv) {
+            if (typingDiv && typingDiv.parentNode) {
+                typingDiv.parentNode.removeChild(typingDiv);
+            }
+        }
+
+        chatbotForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const userMsg = chatbotInput.value.trim();
+            if (!userMsg) return;
+            appendMessage('user', userMsg);
+            chatbotInput.value = '';
+            // Show typing indicator
+            const typingDiv = showTypingIndicator();
+            setTimeout(() => {
+                removeTypingIndicator(typingDiv);
+                appendMessage('bot', getBotReply(userMsg));
+            }, 4000);
+        });
+
+        function appendMessage(sender, text) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chatbot-message ' + sender;
+            const bubble = document.createElement('div');
+            bubble.className = 'chatbot-msg-bubble';
+            // Support line breaks
+            bubble.textContent = '';
+            text.split('\n').forEach((line, idx, arr) => {
+                bubble.appendChild(document.createTextNode(line));
+                if (idx < arr.length - 1) bubble.appendChild(document.createElement('br'));
+            });
+            msgDiv.appendChild(bubble);
+            chatbotMessages.appendChild(msgDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+
+        // Store the latest weather condition
+        let latestWeatherMain = null;
+
+        // Patch getWeather to update latestWeatherMain
+        const originalGetWeather = getWeather;
+        getWeather = async function(lat, lon) {
+            try {
+                const response = await fetch(
+                    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`
+                );
+                if (!response.ok) {
+                    throw new Error('Failed to fetch weather data');
+                }
+                const data = await response.json();
+                const city = data.name || 'Unknown Location';
+                const temp = Math.round(data.main.temp);
+                const description = data.weather[0].description;
+                const weatherMain = data.weather[0].main;
+                const humidity = data.main.humidity;
+                const windSpeed = Math.round(data.wind.speed * 3.6);
+                const emoji = weatherEmojis[weatherMain] || '🌍';
+                latestWeatherMain = weatherMain;
+                weatherContent.innerHTML = `
+                    <div class="weather-emoji">${emoji}</div>
+                    <h2 class="weather-city">${city}</h2>
+                    <p class="weather-desc">${description}</p>
+                    <p class="weather-temp">${temp}°C</p>
+                    <p class="weather-info">Humidity: ${humidity}%</p>
+                    <p class="weather-info">Wind: ${windSpeed} km/h</p>
+                `;
+            } catch (error) {
+                displayError('Unable to load weather data. Please try again.');
+                console.error(error);
+            }
+        }
+
+        function getBotReply(msg) {
+            const lower = msg.toLowerCase();
+            // Weather-specific advice
+            const weatherAdvice = {
+                'Clear': `☀️ Sunny Weather\n\n🍴 What to Eat:\nHydrating fruits like watermelon, oranges, berries, cucumber.\nLight meals: salads, cold sandwiches, curd rice, lemon rice.\nRefreshing drinks: coconut water, lemonade, buttermilk, iced tea.\nAvoid: Spicy or greasy food that can increase body heat.\n\n🧘‍♀️ Relaxation Tips:\nSpend time in shaded outdoor areas, like gardens or balconies.\nMeditation or yoga indoors with cool ventilation.\nGo for a walk in early morning/evening when it’s cooler.\nRead a book, sketch, or listen to calm music in a breezy room.\n\n💡 Extra Tips:\nStay hydrated (2.5–3L water/day).\nWear light-colored cotton clothes.\nUse sunscreen if stepping out.`,
+                'Rain': `🌧️ Rainy/Monsoon Weather\n\n🍴 What to Eat:\nWarm and light foods: soups, khichdi, upma, herbal teas.\nImmunity-boosters: ginger, garlic, turmeric, tulsi, pepper.\nHot snacks: pakoras, samosas (occasionally, not daily).\nAvoid: Street food and raw leafy greens (may carry waterborne bacteria).\n\n🧘‍♀️ Relaxation Tips:\nWatch movies or binge series with warm drinks.\nJournal your thoughts while listening to rain sounds.\nPractice indoor stretching or basic aerobics.\nBrew herbal tea and have a cozy reading time.\n\n💡 Extra Tips:\nKeep surroundings dry and clean (avoid mold/insects).\nWear waterproof footwear if stepping outside.\nAvoid sleeping during the day too much—can lead to fatigue.`,
+                'Drizzle': `🌧️ Rainy/Monsoon Weather\n\n🍴 What to Eat:\nWarm and light foods: soups, khichdi, upma, herbal teas.\nImmunity-boosters: ginger, garlic, turmeric, tulsi, pepper.\nHot snacks: pakoras, samosas (occasionally, not daily).\nAvoid: Street food and raw leafy greens (may carry waterborne bacteria).\n\n🧘‍♀️ Relaxation Tips:\nWatch movies or binge series with warm drinks.\nJournal your thoughts while listening to rain sounds.\nPractice indoor stretching or basic aerobics.\nBrew herbal tea and have a cozy reading time.\n\n💡 Extra Tips:\nKeep surroundings dry and clean (avoid mold/insects).\nWear waterproof footwear if stepping outside.\nAvoid sleeping during the day too much—can lead to fatigue.`,
+                'Clouds': `⛅ Cloudy/Overcast Weather\n\n🍴 What to Eat:\nBalanced meals: parathas, sandwiches, rice & dal combo.\nComfort foods like soups, noodles, or pasta.\nWarm milk with turmeric or cardamom.\nAvoid: Overeating due to mood-induced cravings.\n\n🧘‍♀️ Relaxation Tips:\nListen to lo-fi beats or instrumental music.\nTry light home workouts or dancing to lift mood.\nSpend time decluttering or organizing your space.\nTry coloring books, origami, or crafts.\n\n💡 Extra Tips:\nGet some sunlight if possible (vitamin D deficiency risk).\nMaintain routine to avoid laziness from gloom.`,
+                'Snow': `❄️ Cold/Winter Weather\n\n🍴 What to Eat:\nWarm, hearty meals: soups, stews, oats, dal, chole, rajma.\nInclude dry fruits and nuts: almonds, cashews, dates, figs.\nSpices for warmth: cinnamon, nutmeg, clove, ginger.\nDrink warm water or golden milk at night.\n\n🧘‍♀️ Relaxation Tips:\nWrap in blankets and enjoy slow breathing/meditation.\nTry hot baths or warm foot soaks.\nLight scented candles or incense.\nEngage in reading, journaling, painting.\n\n💡 Extra Tips:\nStay active to beat laziness (short indoor workouts).\nMoisturize skin regularly.\nWear thermal or layered clothing.`,
+                'Mist': `🌫️ Foggy Weather\n\n🍴 What to Eat:\nHot and easily digestible food: porridge, dal-rice, steamed veggies.\nAvoid excessive dairy (can cause congestion).\nWarm herbal drinks: tulsi-ginger tea.\n\n🧘‍♀️ Relaxation Tips:\nAromatherapy with eucalyptus or peppermint.\nIndoor light yoga or stretching.\nPlay puzzle games or practice mindful breathing.\n\n💡 Extra Tips:\nAvoid early morning/evening outings due to low visibility.\nDress in layers to stay warm.\nUse humidifiers if air feels dry.`,
+                'Fog': `🌫️ Foggy Weather\n\n🍴 What to Eat:\nHot and easily digestible food: porridge, dal-rice, steamed veggies.\nAvoid excessive dairy (can cause congestion).\nWarm herbal drinks: tulsi-ginger tea.\n\n🧘‍♀️ Relaxation Tips:\nAromatherapy with eucalyptus or peppermint.\nIndoor light yoga or stretching.\nPlay puzzle games or practice mindful breathing.\n\n💡 Extra Tips:\nAvoid early morning/evening outings due to low visibility.\nDress in layers to stay warm.\nUse humidifiers if air feels dry.`,
+                'Haze': `🌫️ Foggy Weather\n\n🍴 What to Eat:\nHot and easily digestible food: porridge, dal-rice, steamed veggies.\nAvoid excessive dairy (can cause congestion).\nWarm herbal drinks: tulsi-ginger tea.\n\n🧘‍♀️ Relaxation Tips:\nAromatherapy with eucalyptus or peppermint.\nIndoor light yoga or stretching.\nPlay puzzle games or practice mindful breathing.\n\n💡 Extra Tips:\nAvoid early morning/evening outings due to low visibility.\nDress in layers to stay warm.\nUse humidifiers if air feels dry.`,
+                'Thunderstorm': `⚡ Thunderstorm/Extreme Weather Alerts\n\n🍴 What to Eat:\nReady-to-eat healthy snacks: roasted makhana, granola, energy bars.\nKeep essentials like water bottles and dry food.\nAvoid cooking during lightning if unsafe.\n\n🧘‍♀️ Relaxation Tips:\nSafe indoor activity: drawing, journaling, meditation, writing.\nAvoid screen time if power fluctuations occur.\nDo grounding activities like seated meditation with soft music.\n\n💡 Extra Tips:\nStay indoors.\nUnplug devices during lightning.\nEmergency kit: torch, power bank, essential meds.`,
+                'Wind': `🌪️ Windy Weather\n\n🍴 What to Eat:\nLight yet energy-rich meals: chapati-sabzi, lentils, eggs.\nWarm teas: tulsi tea, ginger tea, cinnamon tea.\nAvoid cold drinks and excessive oily food.\n\n🧘‍♀️ Relaxation Tips:\nPractice deep breathing – helps with air pressure imbalance.\nAvoid outdoor workouts if the air is dusty.\nWatch or listen to something light and funny.\n\n💡 Extra Tips:\nProtect eyes and ears from wind/dust.\nClose windows at high gusts.\nIf outdoors, wear windproof jackets.`
+            };
+
+            // If user asks about weather advice, reply with the current weather's advice
+            if (lower.includes('advice') || lower.includes('eat') || lower.includes('relax') || lower.includes('tip') || lower.includes('suggest') || lower.includes('what should') || lower.includes('do in') || lower.includes('activity')) {
+                if (latestWeatherMain && weatherAdvice[latestWeatherMain]) {
+                    return weatherAdvice[latestWeatherMain];
+                } else {
+                    return "Sorry, I couldn't detect the current weather. Please check the weather above.";
+                }
+            }
+            // Fallbacks for greetings and help
+            if (lower.includes('weather')) {
+                if (latestWeatherMain && weatherAdvice[latestWeatherMain]) {
+                    return `Current weather: ${latestWeatherMain}.\n\n${weatherAdvice[latestWeatherMain]}`;
+                } else {
+                    return "You can see the latest weather above! ☀️";
+                }
+            }
+            if (lower.includes('hello') || lower.includes('hi')) return "Hello! How can I assist you?";
+            if (lower.includes('help')) return "I'm here to help! Ask me about the weather, what to eat, or how to relax based on the weather.";
+            if (lower.includes('who are you')) return "I'm your friendly weather chatbot!";
+            // If user asks for food, relaxation, or tips, but weather is unknown
+            if (lower.includes('food') || lower.includes('snack') || lower.includes('drink')) {
+                if (latestWeatherMain && weatherAdvice[latestWeatherMain]) {
+                    return weatherAdvice[latestWeatherMain];
+                } else {
+                    return "Let me know your weather, and I'll suggest something!";
+                }
+            }
+            return "Try asking for advice, food, or relaxation tips for today's weather!";
+        }
+    </script>
+</html>
